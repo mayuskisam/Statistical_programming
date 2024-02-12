@@ -1,0 +1,177 @@
+---
+title: "Predicting with K nearest neighbors"
+author: "Sam Mayuski"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 2a
+
+Loading data and appropriate libraries
+
+```{r}
+library(ISLR)
+library(class)
+library(MASS)
+set.seed(4241)
+```
+
+
+```{r}
+#loading data and defining variables
+load("~/Problem2.dat")
+
+x1 = data$x1
+x2 = data$x2
+xrandom = data$xrandom
+y = data$y
+```
+
+
+**part (ii)**
+```{r}
+yHat = pnorm(0.5 * x1 - 0.4 * x2) #given in question 2 problem statement
+invYHat = 1 - yHat
+
+trainData = yHat[1:500]
+testData = yHat[501:length(yHat)]
+
+#using pairwise maxes to compute Bayes error rates for training and test data
+(bayesTrain = round(1 - mean(pmax(trainData, invYHat[1:500])), 3))
+(bayesTest = round(1 - mean(pmax(testData, invYHat[501:length(yHat)])), 3))
+```
+
+
+**part (iii)**
+```{r}
+#defining training data from x1, x2, y
+x1Train = x1[1:500]
+x2Train = x2[1:500]
+trainY = y[1:500]
+
+#defining testing data from x1, x2, y
+x1Test = x1[501:length(x1)]
+x2Test = x2[501:length(x2)]
+testY = y[501:length(y)]
+
+#running KNN to classify outcomes in the test dataset with error rate calculation
+knn3 = knn(train = data.frame(x1Train, x2Train), test = data.frame(x1Test, x2Test), cl = trainY, k = 3)
+(testError = mean(knn3 != testY)) #error rate for testing data
+```
+
+
+**part (v)**
+```{r}
+#defining a vector of k values to plot
+kVals = c(3, 9, 13, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 43, 61, 81)
+knn = data.frame()
+error = c()
+
+#calculating the error values for each of the k specified in kVals
+for (i in 1:length(kVals)) {
+  knn = knn(train = data.frame(x1Train, x2Train), test = data.frame(x1Test, x2Test), cl = trainY, k = kVals[i])
+  error = c(error, mean(knn != testY))
+  knn = data.frame()
+}
+
+#plotting the outcomes
+plot(kVals, error, col = "red", pch = 19, xlab = "Value of k", ylab = "Test Error", main = "Plot of Test Error as a Function of k")
+lines(kVals, error, col = "black", type = "l")
+
+cbind(kVals, error)
+```
+
+
+**part (vii)**
+```{r}
+#combining the 20 random covariates with x1 and x2
+xrandomFlat = c(as.vector(xrandom), x1, x2)
+combined = matrix(xrandomFlat, ncol = 22)
+
+#splitting into test and train datasets
+train = combined[1:500,]
+test = combined[501:1000,]
+
+knn40 = knn(train, test, cl = trainY, k = 40)
+(testError40 = mean(knn40 != testY))
+
+```
+
+
+## Question 3a
+
+```{r}
+#loading data and fitting regression model
+data(Smarket)
+
+model = lm(Smarket$Today ~ Smarket$Lag1 + Smarket$Lag2 + Smarket$Lag3 + Smarket$Lag4 + 
+     Smarket$Lag5 + as.factor(Smarket$Year) + Smarket$Volume)
+```
+
+
+**part (iii)**
+```{r}
+#testing second model with 3rd degree polynomial
+model2 = lm(Smarket$Today ~ poly(Smarket$Lag1, 3, raw = TRUE) + Smarket$Lag2 + Smarket$Lag3 + 
+              Smarket$Lag4 + Smarket$Lag5 + as.factor(Smarket$Year) + Smarket$Volume)
+summary(model2)
+
+f = round(summary(model2)$fstatistic[1], 4)
+
+#getting degrees of freedom to calculate the p-value
+df1 = summary(model2)$fstatistic[2]
+df2 = summary(model2)$fstatistic[3]
+
+#getting p-value and outputting conclusion
+pVal = round(pf(f, df1 = df1, df2 = df2, lower.tail = FALSE), 4)
+paste0("F-Value: ", f, " p-value: ", pVal, ". Conclusion: fail to reject the null")
+```
+
+
+```{r}
+#testing model one compared to second model
+(aovTwoModels = anova(model, model2))
+```
+
+
+## Question 3b
+
+```{r, include = FALSE}
+set.seed(4241)
+```
+
+**part (i)**
+```{r}
+#changing the directions into 1s and 0s
+Smarket$Direction = ifelse((Smarket$Direction == "Up" | Smarket$Direction == 1), 1, 0)
+
+#splitting data randomly using sample function
+randomIndices = sample(1:nrow(Smarket), size = nrow(Smarket) / 2)
+train = Smarket[randomIndices,]
+test = Smarket[-randomIndices,]
+
+trainResults = train$Direction
+testResults = test$Direction
+
+k = c(1, 3, 5, 9, 13, 17, 19, 21, 23, 25, 29, 31, 33, 35, 61)
+knnSmall = data.frame()
+error = c()
+
+#calculating error rate for each k value in the vector
+for (i in 1:length(k)) {
+  knnSmall = knn(train = data.frame(train[, 1:7]), test = data.frame(test[, 1:7]), cl = trainResults, k = k[i])
+  error = c(error, mean(knnSmall != testResults))
+  knnSmall = data.frame()
+}
+
+#plotting results visually
+plot(k, error, col = "red", pch = 19, xlab = "Value of k", ylab = "Test Error", main = "Plot of Test Error as a Function of k")
+lines(k, error, col = "black", type = "l")
+
+#output of minimum error and corresponding k values
+cbind(k, error)
+paste0("Minimum error: ", min(error), ". k value: ", k[which.min(error)])
+```
