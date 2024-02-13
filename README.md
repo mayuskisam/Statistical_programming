@@ -1,1 +1,1 @@
-Note that some files may require data like problem2.dat to be downloaded.<br />Confidence interval estimation requires cigarettes.csv, which is still being retrieved.
+Note that some files may require data to be downloaded before successful code execution is possible. <br />Confidence interval estimation requires cigarettes.csv, which is still being retrieved.
